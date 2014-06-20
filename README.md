@@ -4,6 +4,8 @@ Welcome to the MapR partner sandbox generator!  Here, you'll find instructions f
 
 By creating your sandbox in this way, you'll have a repeatable process that can be leveraged each time you come out with a new version of your software, or MapR releases a new version.
 
+###Step 0 - Pick an app name
+...and substitute this name anywhere you see MyAppName in these instructions.
 
 ###Step 1 - Get Packer
 [Packer](www.packer.io) is a useful tool for automating the process of creating VM images, and it's what we use at MapR to create our sandbox.  To download and install it on a linux machine, do the following -
