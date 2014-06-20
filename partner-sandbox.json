@@ -1,0 +1,49 @@
+{
+	"variables":{
+		"mapr_version":"3.1.1",
+		"partner_name":"partner",
+		"partner_version":"7.0.1"
+	},
+	"builders":[
+		{
+			"name":"partner",
+			"vm_name":"MapR-{{ user `partner_name` }}-{{ user `mapr_version` }}-{{ user `partner_version`}}",
+			"type":"virtualbox-ovf",
+			"source_path":"output-virtualbox-ovf/MapR-Sandbox-For-Hadoop-{{ user `mapr_version` }}_VB.ova",
+			"ssh_username":"root",
+			"ssh_password":"mapr",
+			"ssh_wait_timeout":"300s",
+			"import_opts":"keepallmacs",
+			"shutdown_command":"shutdown -P now",
+			"format":"ova"
+		}
+	],
+	"provisioners":[
+		{
+			"type":"file",
+			"source":"files/start_{{ user `partner_name` }}.sh",
+			"destination":"/opt/mapr/start_{{ user `partner_name` }}.sh",
+			"only":[
+				"partner"
+			]
+		},
+		{
+			"type":"file",
+			"source":"files/{{ user `partner_name` }}.rpm",
+			"destination":"/tmp/{{ user `partner_name` }}.rpm",
+			"only":[
+				"partner"
+			]
+		},
+		{
+			"type":"shell",
+			"execute_command":"bash '{{.Path}}'",
+			"scripts":[
+				"script/{{ user `partner_name` }}.sh"
+			],
+			"only":[
+				"partner"
+			]
+		}
+	]
+}

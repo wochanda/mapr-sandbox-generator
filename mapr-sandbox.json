@@ -1,0 +1,125 @@
+{
+ "variables": {
+    "iso_url"               : "http://mirrors.kernel.org/centos/6.5/isos/x86_64/CentOS-6.5-x86_64-minimal.iso",
+    "iso_checksum"          : "f21a71e8e31df73297bdd1ccd4a64a36831284bd",
+    "mapr_disk_size"        : "20480",
+    "mapr_version"          : null,
+    "mapr_hbase_version"    : null,
+    "mapr_pig_version"      : null,
+    "mapr_hive_version"     : null,
+    "mapr_hue_version"      : null,
+    "mapr_flume_version"    : null,
+    "mapr_hcatalog_version" : null,
+    "mapr_oozie_version"    : null,
+    "mapr_mahout_version"   : null,
+    "mapr_core_repo_url"    : null,
+    "mapr_eco_repo_url"     : null,
+    "build_headless"        : false
+  },
+  "builders": [{
+    "name"                : "base",
+    "vm_name"             : "MapR Base",
+    "type"                : "virtualbox-iso",
+    "format"              : "ova",
+    "http_directory"      : "http",
+    "headless"            : "{{ user `build_headless` }}",
+    "iso_url"             : "{{ user `iso_url` }}",
+    "iso_checksum"        : "{{ user `iso_checksum` }}",
+    "iso_checksum_type"   : "sha1",
+    "guest_os_type"       : "RedHat_64",
+    "ssh_username"        : "root",
+    "ssh_password"        : "mapr",
+    "ssh_wait_timeout"    : "20m",
+    "boot_command"        : [
+      "<tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg<enter>"
+    ],
+    "shutdown_command"    : "shutdown -P now",
+    "disk_size"           : 10140,
+    "vboxmanage"          : [
+      ["modifyvm", "{{.Name}}", "--memory", "6144"],
+      ["modifyvm", "{{.Name}}", "--cpus", "2"],
+      ["createhd", "--filename", "output-virtualbox-iso/centos65-2.vdi", "--size", "{{ user `mapr_disk_size` }}", "--format", "VDI", "--variant", "Standard"],
+      ["storageattach", "{{.Name}}", "--storagectl", "IDE Controller", "--port", "1", "--device", "1", "--type", "hdd", "--medium", "output-virtualbox-iso/centos65-2.vdi"]
+    ]
+  },
+  {
+    "name"             : "sandbox-base",
+    "vm_name"          : "MapR-Sandbox-Base-For-Hadoop-{{ user `mapr_version` }}",
+    "type"             : "virtualbox-ovf",
+    "source_path"      : "output-base/MapR Base.ova",
+    "ssh_username"     : "root",
+    "ssh_password"     : "mapr",
+    "ssh_wait_timeout" : "300s",
+    "shutdown_command" : "shutdown -P now",
+    "import_opts"      : "keepallmacs",
+    "format"           : "ova",
+    "headless"         : "{{ user `build_headless` }}",
+    "vboxmanage"       : [
+      ["modifyvm", "{{.Name}}", "--memory", "6144"],
+      ["modifyvm", "{{.Name}}", "--cpus", "2"]
+    ]
+  },
+  {
+    "name"             : "sandbox",
+    "vm_name"          : "MapR-Sandbox-For-Hadoop-{{ user `mapr_version` }}",
+    "type"             : "virtualbox-ovf",
+    "source_path"      : "output-sandbox-base/MapR-Sandbox-Base-For-Hadoop-{{ user `mapr_version` }}.ova",
+    "ssh_username"     : "root",
+    "ssh_password"     : "mapr",
+    "ssh_wait_timeout" : "300s",
+    "shutdown_command" : "shutdown -P now",
+    "import_opts"      : "keepallmacs",
+    "headless"         : "{{ user `build_headless` }}",
+    "format"           : "ova"
+  }],
+  "provisioners": [{
+    "type"        : "file",
+    "source"      : "files/startup.tar.gz",
+    "destination" : "/tmp/startup.tar.gz",
+    "only"        : ["sandbox"]
+  },
+  {
+    "type": "shell",
+    "environment_vars": [
+      "MAPR_CORE_VERSION={{ user `mapr_version`}}",
+      "MAPR_HBASE_VERSION={{ user `mapr_hbase_version`}}",
+      "MAPR_PIG_VERSION={{ user `mapr_pig_version`}}",
+      "MAPR_HIVE_VERSION={{ user `mapr_hive_version`}}",
+      "MAPR_HUE_VERSION={{ user `mapr_hue_version`}}",
+      "MAPR_FLUME_VERSION={{ user `mapr_flume_version`}}",
+      "MAPR_HCATALOG_VERSION={{ user `mapr_hcatalog_version`}}",
+      "MAPR_OOZIE_VERSION={{ user `mapr_oozie_version`}}",
+      "MAPR_MAHOUT_VERSION={{ user `mapr_mahout_version`}}",
+      "MAPR_CORE_REPO_URL={{ user `mapr_core_repo_url`}}",
+      "MAPR_ECO_REPO_URL={{ user `mapr_eco_repo_url`}}"
+    ],
+    "execute_command": "{{ .Vars }} bash {{.Path}}",
+    "scripts": [
+      "script/post.sh",
+      "script/cleanup.sh",
+      "script/zerodisk.sh"
+    ],
+    "only": ["sandbox"]
+  },
+  {
+    "type": "shell",
+    "environment_vars": [
+      "MAPR_CORE_VERSION={{ user `mapr_version`}}",
+      "MAPR_CORE_REPO_URL={{ user `mapr_core_repo_url`}}",
+      "MAPR_ECO_REPO_URL={{ user `mapr_eco_repo_url`}}"
+    ],
+    "execute_command": "{{ .Vars }} bash {{.Path}}",
+    "scripts": [
+      "script/base.sh",
+      "script/vagrant.sh",
+      "script/sshd.sh",
+      "script/mapr-install.sh"
+    ],
+    "only": ["sandbox-base"]
+  }],
+  "post-processors": [{
+    "type": "vagrant",
+    "keep_input_artifact": true,
+    "only": ["sandbox"]
+  }]
+}
