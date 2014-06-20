@@ -22,27 +22,18 @@
 		{
 			"type":"file",
 			"source":"files/start_{{ user `partner_name` }}.sh",
-			"destination":"/opt/mapr/start_{{ user `partner_name` }}.sh",
-			"only":[
-				"partner"
-			]
+			"destination":"/opt/mapr/start_{{ user `partner_name` }}.sh"
 		},
 		{
 			"type":"file",
 			"source":"files/{{ user `partner_name` }}.rpm",
-			"destination":"/tmp/{{ user `partner_name` }}.rpm",
-			"only":[
-				"partner"
-			]
+			"destination":"/tmp/{{ user `partner_name` }}.rpm"
 		},
 		{
 			"type":"shell",
 			"execute_command":"bash '{{.Path}}'",
 			"scripts":[
 				"script/{{ user `partner_name` }}.sh"
-			],
-			"only":[
-				"partner"
 			]
 		}
 	]
