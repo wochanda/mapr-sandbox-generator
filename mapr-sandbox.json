@@ -1,10 +1,12 @@
 {
  "variables": {
-    "iso_url"               : "http://mirrors.kernel.org/centos/6.5/isos/x86_64/CentOS-6.5-x86_64-minimal.iso",
-    "iso_checksum"          : "f21a71e8e31df73297bdd1ccd4a64a36831284bd",
+    "iso_url"               : "http://mirrors.kernel.org/centos/6/isos/x86_64/CentOS-6.6-x86_64-minimal.iso",
+    "iso_checksum"          : "4ed6c56d365bd3ab12cd88b8a480f4a62e7c66d2",
     "mapr_disk_size"        : "20480",
     "mapr_version"          : null,
+    "mapr_spark_version"    : null, 
     "mapr_hbase_version"    : null,
+    "mapr_sqoop_version"    : null,
     "mapr_pig_version"      : null,
     "mapr_hive_version"     : null,
     "mapr_hue_version"      : null,
@@ -12,8 +14,12 @@
     "mapr_hcatalog_version" : null,
     "mapr_oozie_version"    : null,
     "mapr_mahout_version"   : null,
+    "mapr_drill_version"    : null,
     "mapr_core_repo_url"    : null,
     "mapr_eco_repo_url"     : null,
+    "hadoop_version"        : "2.5.1",
+    "mapr_banner_url"       : "https://%s:8443",
+    "mapr_banner_name"      : "MapR-Sandbox-For-Hadoop",
     "build_headless"        : false
   },
   "builders": [{
@@ -55,13 +61,25 @@
     "format"           : "ova",
     "headless"         : "{{ user `build_headless` }}",
     "vboxmanage"       : [
-      ["modifyvm", "{{.Name}}", "--memory", "6144"],
+      ["modifyvm", "{{.Name}}", "--memory", "8192"],
       ["modifyvm", "{{.Name}}", "--cpus", "2"]
     ]
   },
   {
+    "name": "sandbox-vmware",
+    "vm_name": "{{ user `mapr_banner_name` }}-{{user `mapr_version` }}-vmware",
+    "type": "virtualbox-ovf",
+    "source_path": "output-sandbox/{{ user `mapr_banner_name` }}-{{user `mapr_version` }}.ova",
+    "ssh_username": "root",
+    "ssh_password": "mapr",
+    "ssh_wait_timeout": "300s",
+    "shutdown_command": "shutdown -P now",
+    "import_opts": "keepallmacs",
+    "format": "ova"
+  },
+  {
     "name"             : "sandbox",
-    "vm_name"          : "MapR-Sandbox-For-Hadoop-{{ user `mapr_version` }}",
+    "vm_name"          : "{{ user `mapr_banner_name` }}-{{ user `mapr_version` }}",
     "type"             : "virtualbox-ovf",
     "source_path"      : "output-sandbox-base/MapR-Sandbox-Base-For-Hadoop-{{ user `mapr_version` }}.ova",
     "ssh_username"     : "root",
@@ -70,9 +88,54 @@
     "shutdown_command" : "shutdown -P now",
     "import_opts"      : "keepallmacs",
     "headless"         : "{{ user `build_headless` }}",
-    "format"           : "ova"
-  }],
-  "provisioners": [{
+    "format"           : "ova",
+    "vboxmanage_post"  : [
+	["modifyvm", "{{.Name}}", "--nic1", "nat"],
+	["modifyvm", "{{.Name}}", "--natdnspassdomain1", "on"],
+	["modifyvm", "{{.Name}}", "--natdnsproxy1", "off"],
+	["modifyvm", "{{.Name}}", "--natpf1", "nfsmgmt,tcp,127.0.0.1,9998,,9998"],
+	["modifyvm", "{{.Name}}", "--natpf1", "NodeManagerUI,tcp,127.0.0.1,8042,,8042"],
+	["modifyvm", "{{.Name}}", "--natpf1", "HueWeb,tcp,127.0.0.1,8888,,8888"],
+	["modifyvm", "{{.Name}}", "--natpf1", "ResourceManagerUI,tcp,127.0.0.1,8088,,8088"],
+	["modifyvm", "{{.Name}}", "--natpf1", "nfsmon,tcp,127.0.0.1,9997,,9997"],
+	["modifyvm", "{{.Name}}", "--natpf1", "HiveServer2,tcp,127.0.0.1,10001,,10001"],
+	["modifyvm", "{{.Name}}", "--natpf1", "YarnTimelineSecure,tcp,127.0.0.1,8190,,8190"],
+	["modifyvm", "{{.Name}}", "--natpf1", "nfs2,tcp,127.0.0.1,111,,111"],
+	["modifyvm", "{{.Name}}", "--natpf1", "ssh,tcp,127.0.0.1,2222,,22"],
+	["modifyvm", "{{.Name}}", "--natpf1", "SparkDriver,tcp,127.0.0.1,4040,,4040"],
+	["modifyvm", "{{.Name}}", "--natpf1", "cldbweb,tcp,127.0.0.1,7221,,7221"],
+	["modifyvm", "{{.Name}}", "--natpf1", "SecureResourceManagerUI,tcp,127.0.0.1,8090,,8090"],
+	["modifyvm", "{{.Name}}", "--natpf1", "maprfs,tcp,127.0.0.1,5660,,5660"],
+	["modifyvm", "{{.Name}}", "--natpf1", "mcs,tcp,127.0.0.1,8443,,8443"],
+	["modifyvm", "{{.Name}}", "--natpf1", "HSHTTP,tcp,127.0.0.1,19888,,19888"],
+	["modifyvm", "{{.Name}}", "--natpf1", "TaskTrackerUI,tcp,127.0.0.1,50060,,50060"],
+	["modifyvm", "{{.Name}}", "--natpf1", "JobTrackerUI,tcp,127.0.0.1,50030,,50030"],
+	["modifyvm", "{{.Name}}", "--natpf1", "SparkHistory,tcp,127.0.0.1,18080,,18080"],
+	["modifyvm", "{{.Name}}", "--natpf1", "YarnJobSubmission,tcp,127.0.0.1,8032,,8032"],
+	["modifyvm", "{{.Name}}", "--natpf1", "Httpfs,tcp,127.0.0.1,14000,,14000"],
+	["modifyvm", "{{.Name}}", "--natpf1", "HSUISecure,tcp,127.0.0.1,19890,,19890"],
+	["modifyvm", "{{.Name}}", "--natpf1", "HiveServer,tcp,127.0.0.1,10000,,10000"],
+	["modifyvm", "{{.Name}}", "--natpf1", "OozieHTTPS,tcp,127.0.0.1,11443,,11443"],
+	["modifyvm", "{{.Name}}", "--natpf1", "Sqoop2Server,tcp,127.0.0.1,12000,,12000"],
+	["modifyvm", "{{.Name}}", "--natpf1", "SparkWorker,tcp,127.0.0.1,8081,,8081"],
+	["modifyvm", "{{.Name}}", "--natpf1", "HueBeeswax,tcp,127.0.0.1,8002,,8002"],
+	["modifyvm", "{{.Name}}", "--natpf1", "SparkMaster,tcp,127.0.0.1,8080,,8080"],
+	["modifyvm", "{{.Name}}", "--natpf1", "drillbit,tcp,127.0.0.1,31010,,31010"],
+	["modifyvm", "{{.Name}}", "--natpf1", "SecureNodeManagerUI,tcp,127.0.0.1,8044,,8044"],
+	["modifyvm", "{{.Name}}", "--natpf1", "drill,tcp,127.0.0.1,8047,,8047"],
+	["modifyvm", "{{.Name}}", "--natpf1", "Oozie,tcp,127.0.0.1,11000,,11000"],
+	["modifyvm", "{{.Name}}", "--natpf1", "nfs,tcp,127.0.0.1,2049,,2049"],
+	["modifyvm", "{{.Name}}", "--natpf1", "YarnTimeline,tcp,127.0.0.1,8188,,8188"],
+	["modifyvm", "{{.Name}}", "--natpf1", "SparkApplication,tcp,127.0.0.1,7077,,7077"]
+    ]
+  }
+  ],
+  "provisioners": [
+  {
+    "type": "shell",
+    "inline": ["sleep 5;sync;echo 3 >/proc/sys/vm/drop_caches"]
+  },
+  {
     "type"        : "file",
     "source"      : "files/startup.tar.gz",
     "destination" : "/tmp/startup.tar.gz",
@@ -90,8 +153,14 @@
       "MAPR_HCATALOG_VERSION={{ user `mapr_hcatalog_version`}}",
       "MAPR_OOZIE_VERSION={{ user `mapr_oozie_version`}}",
       "MAPR_MAHOUT_VERSION={{ user `mapr_mahout_version`}}",
+      "MAPR_DRILL_VERSION={{ user `mapr_drill_version`}}",
       "MAPR_CORE_REPO_URL={{ user `mapr_core_repo_url`}}",
-      "MAPR_ECO_REPO_URL={{ user `mapr_eco_repo_url`}}"
+      "MAPR_ECO_REPO_URL={{ user `mapr_eco_repo_url`}}",
+      "MAPR_BANNER_URL={{ user `mapr_banner_url` }}",
+      "MAPR_BANNER_NAME={{ user `mapr_banner_name` }}",
+      "MAPR_SQOOP_VERSION={{ user `mapr_sqoop_version` }}",
+      "MAPR_SPARK_VERSION={{ user `mapr_spark_version` }}", 
+      "HADOOP_VERSION={{ user `hadoop_version` }}"
     ],
     "execute_command": "{{ .Vars }} bash {{.Path}}",
     "scripts": [
@@ -116,10 +185,10 @@
       "script/mapr-install.sh"
     ],
     "only": ["sandbox-base"]
-  }],
-  "post-processors": [{
-    "type": "vagrant",
-    "keep_input_artifact": true,
-    "only": ["sandbox"]
+  },
+  {
+    "type": "shell",
+    "inline": ["touch /vmware"],
+    "only": ["sandbox-vmware"]
   }]
 }
